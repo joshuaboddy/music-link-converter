@@ -199,13 +199,6 @@
       animation: fadeIn 0.3s ease;
     }
 
-    .songlink-credit {
-      margin-top: 2rem;
-      color: #444;
-      font-size: 0.75rem;
-    }
-
-    .songlink-credit a { color: #555; }
   </style>
 </head>
 <body>
@@ -225,7 +218,6 @@
     <div id="output"></div>
   </div>
 
-  <p class="songlink-credit">Powered by <a href="https://odesli.co" target="_blank" rel="noopener">Songlink/Odesli</a></p>
 
   <script>
     const input = document.getElementById('urlInput');
@@ -289,7 +281,7 @@
 
       try {
         const data = await fetchWithRetry(url);
-        render(data, platform);
+        render(data);
       } catch (err) {
         output.innerHTML = `<div class="error">${err.message || 'Something went wrong. Please check the link and try again.'}</div>`;
       } finally {
@@ -297,21 +289,13 @@
       }
     }
 
-    function render(data, sourcePlatform) {
-      const targetPlatform = sourcePlatform === 'spotify' ? 'itunes' : 'spotify';
+    function render(data) {
+      if (data.error) {
+        output.innerHTML = `<div class="error">${escapeHtml(data.error)}</div>`;
+        return;
+      }
 
-      // Get song info from the first available entity
-      const entityKey = Object.keys(data.entitiesByUniqueId || {})[0];
-      const entity = entityKey ? data.entitiesByUniqueId[entityKey] : null;
-
-      const title = entity?.title || 'Unknown Title';
-      const artist = entity?.artistName || 'Unknown Artist';
-      const thumbnail = entity?.thumbnailUrl || '';
-
-      const spotifyUrl = data.linksByPlatform?.spotify?.url;
-      const appleUrl = data.linksByPlatform?.itunes?.url;
-
-      const targetUrl = targetPlatform === 'spotify' ? spotifyUrl : appleUrl;
+      const { title, artist, thumbnail, spotifyUrl, appleUrl } = data;
 
       let html = '<div class="result">';
 
@@ -321,8 +305,8 @@
         html += `<img src="${thumbnail}" alt="Album art" />`;
       }
       html += `<div class="song-details">
-        <h3>${escapeHtml(title)}</h3>
-        <p>${escapeHtml(artist)}</p>
+        <h3>${escapeHtml(title || 'Unknown Title')}</h3>
+        <p>${escapeHtml(artist || 'Unknown Artist')}</p>
       </div></div>`;
 
       // Links
@@ -334,6 +318,13 @@
           <a href="${spotifyUrl}" target="_blank" rel="noopener">${spotifyUrl}</a>
           <button class="copy-btn" onclick="copyLink(this, '${escapeAttr(spotifyUrl)}')">Copy</button>
         </div>`;
+      } else {
+        const searchUrl = `https://open.spotify.com/search/${encodeURIComponent(title + ' ' + artist)}`;
+        html += `<div class="link-row">
+          <div class="platform-icon spotify">S</div>
+          <a href="${searchUrl}" target="_blank" rel="noopener">Search on Spotify</a>
+          <button class="copy-btn" onclick="copyLink(this, '${escapeAttr(searchUrl)}')">Copy</button>
+        </div>`;
       }
 
       if (appleUrl) {
@@ -342,22 +333,8 @@
           <a href="${appleUrl}" target="_blank" rel="noopener">${appleUrl}</a>
           <button class="copy-btn" onclick="copyLink(this, '${escapeAttr(appleUrl)}')">Copy</button>
         </div>`;
-      }
-
-      // If a platform link is missing, provide a search fallback
-      if (!spotifyUrl) {
-        const searchQuery = encodeURIComponent(`${title} ${artist}`);
-        const searchUrl = `https://open.spotify.com/search/${searchQuery}`;
-        html += `<div class="link-row">
-          <div class="platform-icon spotify">S</div>
-          <a href="${searchUrl}" target="_blank" rel="noopener">Search on Spotify</a>
-          <button class="copy-btn" onclick="copyLink(this, '${escapeAttr(searchUrl)}')">Copy</button>
-        </div>`;
-      }
-
-      if (!appleUrl) {
-        const searchQuery = encodeURIComponent(`${title} ${artist}`);
-        const searchUrl = `https://music.apple.com/search?term=${searchQuery}`;
+      } else {
+        const searchUrl = `https://music.apple.com/search?term=${encodeURIComponent(title + ' ' + artist)}`;
         html += `<div class="link-row">
           <div class="platform-icon apple">A</div>
           <a href="${searchUrl}" target="_blank" rel="noopener">Search on Apple Music</a>
