@@ -199,6 +199,56 @@
       animation: fadeIn 0.3s ease;
     }
 
+    .search-results {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .search-results-label {
+      color: #888;
+      font-size: 0.8rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .search-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .search-item:hover {
+      border-color: #444;
+      background: #222;
+    }
+
+    .search-item img {
+      width: 48px;
+      height: 48px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: #2a2a2a;
+      flex-shrink: 0;
+    }
+
+    .search-item-info h4 {
+      font-size: 0.9rem;
+      color: #fff;
+      margin-bottom: 0.1rem;
+      font-weight: 500;
+    }
+
+    .search-item-info p {
+      font-size: 0.8rem;
+      color: #888;
+    }
   </style>
 </head>
 <body>
@@ -210,7 +260,7 @@
       <input
         type="text"
         id="urlInput"
-        placeholder="Paste a Spotify or Apple Music link..."
+        placeholder="Paste a link or search for a song..."
         autofocus
       />
       <button class="convert-btn" id="convertBtn" onclick="convert()">Convert</button>
@@ -228,9 +278,11 @@
       if (e.key === 'Enter') convert();
     });
 
-    // Auto-convert when pasting
-    input.addEventListener('paste', () => {
-      setTimeout(convert, 100);
+    // Auto-convert when pasting a URL
+    input.addEventListener('paste', (e) => {
+      setTimeout(() => {
+        if (isUrl(input.value.trim())) convert();
+      }, 100);
     });
 
     async function fetchWithRetry(url, retries = 3) {
@@ -260,32 +312,65 @@
       }
     }
 
-    function detectPlatform(url) {
-      if (url.includes('open.spotify.com') || url.includes('spotify.link')) return 'spotify';
-      if (url.includes('music.apple.com') || url.includes('itunes.apple.com')) return 'itunes';
-      return null;
+    function isUrl(str) {
+      return /^https?:\/\//.test(str) || str.includes('open.spotify.com') || str.includes('music.apple.com') || str.includes('spotify.link');
     }
 
     async function convert() {
-      const url = input.value.trim();
-      if (!url) return;
-
-      const platform = detectPlatform(url);
-      if (!platform) {
-        output.innerHTML = '<div class="error">Please paste a valid Spotify or Apple Music link.</div>';
-        return;
-      }
+      const val = input.value.trim();
+      if (!val) return;
 
       output.innerHTML = '<div class="loading"><div class="spinner"></div><br>Finding your song...</div>';
       convertBtn.disabled = true;
 
       try {
-        const data = await fetchWithRetry(url);
-        render(data);
+        if (isUrl(val)) {
+          const data = await fetchWithRetry(val);
+          render(data);
+        } else {
+          await search(val);
+        }
       } catch (err) {
-        output.innerHTML = `<div class="error">${err.message || 'Something went wrong. Please check the link and try again.'}</div>`;
+        output.innerHTML = `<div class="error">${err.message || 'Something went wrong. Please try again.'}</div>`;
       } finally {
         convertBtn.disabled = false;
+      }
+    }
+
+    async function search(query) {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+      if (!res.ok) throw new Error('Search failed. Please try again.');
+      const data = await res.json();
+
+      if (!data.results?.length) {
+        output.innerHTML = '<div class="error">No results found. Try a different search.</div>';
+        return;
+      }
+
+      let html = '<div class="search-results">';
+      html += '<p class="search-results-label">Pick a song:</p>';
+
+      for (const item of data.results) {
+        html += `<div class="search-item" onclick="selectTrack('${escapeAttr(item.spotifyUrl)}')">
+          <img src="${item.thumbnail}" alt="" />
+          <div class="search-item-info">
+            <h4>${escapeHtml(item.title)}</h4>
+            <p>${escapeHtml(item.artist)}</p>
+          </div>
+        </div>`;
+      }
+
+      html += '</div>';
+      output.innerHTML = html;
+    }
+
+    async function selectTrack(spotifyUrl) {
+      output.innerHTML = '<div class="loading"><div class="spinner"></div><br>Getting links...</div>';
+      try {
+        const data = await fetchWithRetry(spotifyUrl);
+        render(data);
+      } catch (err) {
+        output.innerHTML = `<div class="error">${err.message || 'Something went wrong.'}</div>`;
       }
     }
 
