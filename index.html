@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Music Link Converter</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      background: linear-gradient(135deg, #1DB954, #fc3c44);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      color: #888;
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+
+    .converter {
+      width: 100%;
+      max-width: 500px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    input {
+      flex: 1;
+      padding: 0.85rem 1rem;
+      border: 1px solid #333;
+      border-radius: 12px;
+      background: #1a1a1a;
+      color: #e0e0e0;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus { border-color: #555; }
+    input::placeholder { color: #555; }
+
+    button {
+      padding: 0.85rem 1.25rem;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .convert-btn {
+      background: linear-gradient(135deg, #1DB954, #1ed760);
+      color: #000;
+      white-space: nowrap;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #888;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border: 3px solid #333;
+      border-top-color: #1DB954;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 0.5rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .result {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 16px;
+      overflow: hidden;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .song-info {
+      display: flex;
+      gap: 1rem;
+      padding: 1.25rem;
+      align-items: center;
+    }
+
+    .song-info img {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #2a2a2a;
+    }
+
+    .song-details h3 {
+      font-size: 1.05rem;
+      margin-bottom: 0.2rem;
+      color: #fff;
+    }
+
+    .song-details p {
+      color: #888;
+      font-size: 0.9rem;
+    }
+
+    .links {
+      border-top: 1px solid #2a2a2a;
+      padding: 1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .link-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .platform-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .platform-icon.spotify { background: #1DB954; color: #000; }
+    .platform-icon.apple { background: #fc3c44; color: #fff; }
+
+    .link-row a {
+      color: #bbb;
+      text-decoration: none;
+      font-size: 0.85rem;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .link-row a:hover { color: #fff; }
+
+    .copy-btn {
+      background: #2a2a2a;
+      color: #e0e0e0;
+      padding: 0.4rem 0.75rem;
+      font-size: 0.8rem;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    .copy-btn.copied {
+      background: #1DB954;
+      color: #000;
+    }
+
+    .error {
+      background: #2a1515;
+      border: 1px solid #4a2020;
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      color: #ff6b6b;
+      font-size: 0.9rem;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .songlink-credit {
+      margin-top: 2rem;
+      color: #444;
+      font-size: 0.75rem;
+    }
+
+    .songlink-credit a { color: #555; }
+  </style>
+</head>
+<body>
+  <h1>Music Link Converter</h1>
+  <p class="subtitle">Spotify &harr; Apple Music</p>
+
+  <div class="converter">
+    <div class="input-group">
+      <input
+        type="text"
+        id="urlInput"
+        placeholder="Paste a Spotify or Apple Music link..."
+        autofocus
+      />
+      <button class="convert-btn" id="convertBtn" onclick="convert()">Convert</button>
+    </div>
+    <div id="output"></div>
+  </div>
+
+  <p class="songlink-credit">Powered by <a href="https://odesli.co" target="_blank" rel="noopener">Songlink/Odesli</a></p>
+
+  <script>
+    const input = document.getElementById('urlInput');
+    const output = document.getElementById('output');
+    const convertBtn = document.getElementById('convertBtn');
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') convert();
+    });
+
+    // Auto-convert when pasting
+    input.addEventListener('paste', () => {
+      setTimeout(convert, 100);
+    });
+
+    async function fetchWithRetry(url, retries = 3) {
+      const baseUrl = `https://api.song.link/v1-alpha.1/links?url=${encodeURIComponent(url)}&userCountry=US`;
+
+      for (let i = 0; i < retries; i++) {
+        const res = await fetch(baseUrl);
+
+        if (res.ok) return res.json();
+
+        if (res.status === 429) {
+          if (i < retries - 1) {
+            output.innerHTML = '<div class="loading"><div class="spinner"></div><br>Rate limited, retrying...</div>';
+            await new Promise(r => setTimeout(r, 2000 * (i + 1)));
+            continue;
+          }
+          throw new Error('Rate limited by Songlink API. Please wait a moment and try again.');
+        }
+
+        if (res.status === 404) {
+          throw new Error('Song not found. The link may be invalid or the song may not be available on other platforms.');
+        }
+
+        let detail = '';
+        try { const body = await res.json(); detail = body.code || ''; } catch {}
+        throw new Error(`API error (${res.status}${detail ? ': ' + detail : ''}). Please check the link and try again.`);
+      }
+    }
+
+    function detectPlatform(url) {
+      if (url.includes('open.spotify.com') || url.includes('spotify.link')) return 'spotify';
+      if (url.includes('music.apple.com') || url.includes('itunes.apple.com')) return 'itunes';
+      return null;
+    }
+
+    async function convert() {
+      const url = input.value.trim();
+      if (!url) return;
+
+      const platform = detectPlatform(url);
+      if (!platform) {
+        output.innerHTML = '<div class="error">Please paste a valid Spotify or Apple Music link.</div>';
+        return;
+      }
+
+      output.innerHTML = '<div class="loading"><div class="spinner"></div><br>Finding your song...</div>';
+      convertBtn.disabled = true;
+
+      try {
+        const data = await fetchWithRetry(url);
+        render(data, platform);
+      } catch (err) {
+        output.innerHTML = `<div class="error">${err.message || 'Something went wrong. Please check the link and try again.'}</div>`;
+      } finally {
+        convertBtn.disabled = false;
+      }
+    }
+
+    function render(data, sourcePlatform) {
+      const targetPlatform = sourcePlatform === 'spotify' ? 'itunes' : 'spotify';
+
+      // Get song info from the first available entity
+      const entityKey = Object.keys(data.entitiesByUniqueId || {})[0];
+      const entity = entityKey ? data.entitiesByUniqueId[entityKey] : null;
+
+      const title = entity?.title || 'Unknown Title';
+      const artist = entity?.artistName || 'Unknown Artist';
+      const thumbnail = entity?.thumbnailUrl || '';
+
+      const spotifyUrl = data.linksByPlatform?.spotify?.url;
+      const appleUrl = data.linksByPlatform?.itunes?.url;
+
+      const targetUrl = targetPlatform === 'spotify' ? spotifyUrl : appleUrl;
+
+      let html = '<div class="result">';
+
+      // Song info
+      html += '<div class="song-info">';
+      if (thumbnail) {
+        html += `<img src="${thumbnail}" alt="Album art" />`;
+      }
+      html += `<div class="song-details">
+        <h3>${escapeHtml(title)}</h3>
+        <p>${escapeHtml(artist)}</p>
+      </div></div>`;
+
+      // Links
+      html += '<div class="links">';
+
+      if (spotifyUrl) {
+        html += `<div class="link-row">
+          <div class="platform-icon spotify">S</div>
+          <a href="${spotifyUrl}" target="_blank" rel="noopener">${spotifyUrl}</a>
+          <button class="copy-btn" onclick="copyLink(this, '${escapeAttr(spotifyUrl)}')">Copy</button>
+        </div>`;
+      }
+
+      if (appleUrl) {
+        html += `<div class="link-row">
+          <div class="platform-icon apple">A</div>
+          <a href="${appleUrl}" target="_blank" rel="noopener">${appleUrl}</a>
+          <button class="copy-btn" onclick="copyLink(this, '${escapeAttr(appleUrl)}')">Copy</button>
+        </div>`;
+      }
+
+      if (!targetUrl) {
+        html += `<div class="error" style="margin: 0;">Not available on ${targetPlatform === 'spotify' ? 'Spotify' : 'Apple Music'}.</div>`;
+      }
+
+      html += '</div></div>';
+      output.innerHTML = html;
+    }
+
+    async function copyLink(btn, url) {
+      try {
+        await navigator.clipboard.writeText(url);
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 2000);
+      } catch {
+        // Fallback
+        const ta = document.createElement('textarea');
+        ta.value = url;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 2000);
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function escapeAttr(str) {
+      return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
