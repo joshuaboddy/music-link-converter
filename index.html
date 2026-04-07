@@ -242,7 +242,7 @@
     });
 
     async function fetchWithRetry(url, retries = 3) {
-      const baseUrl = `https://api.song.link/v1-alpha.1/links?url=${encodeURIComponent(url)}&userCountry=US`;
+      const baseUrl = `/api/convert?url=${encodeURIComponent(url)}`;
 
       for (let i = 0; i < retries; i++) {
         const res = await fetch(baseUrl);
