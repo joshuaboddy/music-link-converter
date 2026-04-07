@@ -344,8 +344,25 @@
         </div>`;
       }
 
-      if (!targetUrl) {
-        html += `<div class="error" style="margin: 0;">Not available on ${targetPlatform === 'spotify' ? 'Spotify' : 'Apple Music'}.</div>`;
+      // If a platform link is missing, provide a search fallback
+      if (!spotifyUrl) {
+        const searchQuery = encodeURIComponent(`${title} ${artist}`);
+        const searchUrl = `https://open.spotify.com/search/${searchQuery}`;
+        html += `<div class="link-row">
+          <div class="platform-icon spotify">S</div>
+          <a href="${searchUrl}" target="_blank" rel="noopener">Search on Spotify</a>
+          <button class="copy-btn" onclick="copyLink(this, '${escapeAttr(searchUrl)}')">Copy</button>
+        </div>`;
+      }
+
+      if (!appleUrl) {
+        const searchQuery = encodeURIComponent(`${title} ${artist}`);
+        const searchUrl = `https://music.apple.com/search?term=${searchQuery}`;
+        html += `<div class="link-row">
+          <div class="platform-icon apple">A</div>
+          <a href="${searchUrl}" target="_blank" rel="noopener">Search on Apple Music</a>
+          <button class="copy-btn" onclick="copyLink(this, '${escapeAttr(searchUrl)}')">Copy</button>
+        </div>`;
       }
 
       html += '</div></div>';
